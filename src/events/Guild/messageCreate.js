@@ -3,7 +3,7 @@ const config = require("../../config");
 const { log } = require("../../functions");
 const GuildSchema = require("../../schemas/GuildSchema");
 const ExtendedClient = require("../../class/ExtendedClient");
-
+const handleMelodyBoardMessage = require("../../Functions/Melody/handleMelodyBoardMessage.js");
 const cooldown = new Map();
 
 module.exports = {
@@ -15,15 +15,18 @@ module.exports = {
      * @returns
      */
     run: async (client, message) => {
-        if (message.author.bot || message.channel.type === ChannelType.DM) return;
-
+        if (message.author.bot || message.channel.type === ChannelType.DM)
+            return;
+        if (await handleMelodyBoardMessage(message, client)) return;
         if (!config.handler.commands.prefix) return;
 
         let prefix = config.handler.prefix;
 
         if (config.handler?.mongodb?.enabled) {
             try {
-                const guildData = await GuildSchema.findOne({ guild: message.guildId });
+                const guildData = await GuildSchema.findOne({
+                    guild: message.guildId
+                });
 
                 if (guildData && guildData?.prefix) prefix = guildData.prefix;
             } catch {
@@ -34,8 +37,8 @@ module.exports = {
         if (!message.content.startsWith(prefix)) return;
 
         const args = message.content.slice(prefix.length).trim().split(/ +/g);
-        
-        const argsString = message.content.slice(prefix.length).trim()
+
+        const argsString = message.content.slice(prefix.length).trim();
         const commandInput = args.shift().toLowerCase();
 
         if (!commandInput.length) return;
@@ -50,15 +53,20 @@ module.exports = {
             try {
                 if (
                     command.structure?.permissions &&
-                    !message.member.permissions.has(command.structure?.permissions)
+                    !message.member.permissions.has(
+                        command.structure?.permissions
+                    )
                 ) {
                     await message.reply({
                         content:
-                            config.messageSettings.notHasPermissionMessage !== undefined &&
-                                config.messageSettings.notHasPermissionMessage !== null &&
-                                config.messageSettings.notHasPermissionMessage !== ""
+                            config.messageSettings.notHasPermissionMessage !==
+                                undefined &&
+                            config.messageSettings.notHasPermissionMessage !==
+                                null &&
+                            config.messageSettings.notHasPermissionMessage !==
+                                ""
                                 ? config.messageSettings.notHasPermissionMessage
-                                : "You do not have the permission to use this command.",
+                                : "You do not have the permission to use this command."
                     });
 
                     return;
@@ -69,11 +77,15 @@ module.exports = {
                         setTimeout(async () => {
                             await message.reply({
                                 content:
-                                    config.messageSettings.developerMessage !== undefined &&
-                                        config.messageSettings.developerMessage !== null &&
-                                        config.messageSettings.developerMessage !== ""
-                                        ? config.messageSettings.developerMessage
-                                        : "You are not authorized to use this command",
+                                    config.messageSettings.developerMessage !==
+                                        undefined &&
+                                    config.messageSettings.developerMessage !==
+                                        null &&
+                                    config.messageSettings.developerMessage !==
+                                        ""
+                                        ? config.messageSettings
+                                              .developerMessage
+                                        : "You are not authorized to use this command"
                             });
                         }, 5 * 1000);
                     }
@@ -85,10 +97,10 @@ module.exports = {
                     await message.reply({
                         content:
                             config.messageSettings.nsfwMessage !== undefined &&
-                                config.messageSettings.nsfwMessage !== null &&
-                                config.messageSettings.nsfwMessage !== ""
+                            config.messageSettings.nsfwMessage !== null &&
+                            config.messageSettings.nsfwMessage !== ""
                                 ? config.messageSettings.nsfwMessage
-                                : "The current channel is not a NSFW channel.",
+                                : "The current channel is not a NSFW channel."
                     });
 
                     return;
@@ -105,7 +117,7 @@ module.exports = {
                         setTimeout(() => {
                             let data = cooldown.get(message.author.id);
 
-                            data = data.filter((v) => v !== commandInput);
+                            data = data.filter(v => v !== commandInput);
 
                             if (data.length <= 0) {
                                 cooldown.delete(message.author.id);
@@ -118,14 +130,19 @@ module.exports = {
                     if (cooldown.has(message.author.id)) {
                         let data = cooldown.get(message.author.id);
 
-                        if (data.some((v) => v === commandInput)) {
+                        if (data.some(v => v === commandInput)) {
                             await message.reply({
-                                content:
-                                    (config.messageSettings.cooldownMessage !== undefined &&
-                                        config.messageSettings.cooldownMessage !== null &&
-                                        config.messageSettings.cooldownMessage !== ""
-                                        ? config.messageSettings.cooldownMessage
-                                        : "Slow down buddy! You're too fast to use this command ({cooldown}s).").replace(/{cooldown}/g, command.structure.cooldown / 1000),
+                                content: (config.messageSettings
+                                    .cooldownMessage !== undefined &&
+                                config.messageSettings.cooldownMessage !==
+                                    null &&
+                                config.messageSettings.cooldownMessage !== ""
+                                    ? config.messageSettings.cooldownMessage
+                                    : "Slow down buddy! You're too fast to use this command ({cooldown}s)."
+                                ).replace(
+                                    /{cooldown}/g,
+                                    command.structure.cooldown / 1000
+                                )
                             });
 
                             return;
@@ -139,10 +156,10 @@ module.exports = {
                     }
                 }
 
-                command.run(client, message, args,config,argsString);
+                command.run(client, message, args, config, argsString);
             } catch (error) {
                 log(error, "err");
             }
         }
-    },
+    }
 };

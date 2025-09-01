@@ -1,4 +1,31 @@
-function getVideoId(url) {
+/**
+ * Converts milliseconds to a readable format like mm:ss or hh:mm:ss
+ * @param {number} ms 
+ * @returns {string}
+ */
+ function emitQueueChange(client, type, player, tracks, position, oldStoredQueue, newStoredQueue) {
+    client.lavalink.emit("queueChangesWatcher", {
+        type,
+        guildId: player.guildId,
+        tracks,
+        position,
+        oldStoredQueue,
+        newStoredQueue
+    });
+}
+
+function formatDuration(ms) {
+    if (!ms) return "0:00";
+    const totalSeconds = Math.floor(ms / 1000);
+    const hours = Math.floor(totalSeconds / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    const seconds = totalSeconds % 60;
+    return hours > 0
+        ? `${hours}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`
+        : `${minutes}:${seconds.toString().padStart(2, '0')}`;
+}
+
+module.exports.formatDuration = formatDuration;function getVideoId(url) {
     const urlObj = new URL(url);
     let videoId = urlObj.searchParams.get("v");
 
@@ -50,7 +77,39 @@ async function fetchImageBuffer(url) {
                 reject(err);
             });
     });
+}/**
+ * Converts milliseconds to a readable format like mm:ss or hh:mm:ss
+ * @param {number} ms 
+ * @returns {string}
+ */
+function formatDuration(ms) {
+    if (!ms) return "0:00";
+    const totalSeconds = Math.floor(ms / 1000);
+    const hours = Math.floor(totalSeconds / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    const seconds = totalSeconds % 60;
+    return hours > 0
+        ? `${hours}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`
+        : `${minutes}:${seconds.toString().padStart(2, '0')}`;
 }
+
+module.exports.formatDuration = formatDuration;
+/**
+ * Converts milliseconds to a readable format like mm:ss or hh:mm:ss
+ * @param {number} ms 
+ * @returns {string}
+ */
+function formatDuration(ms) {
+    if (!ms) return "0:00";
+    const totalSeconds = Math.floor(ms / 1000);
+    const hours = Math.floor(totalSeconds / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    const seconds = totalSeconds % 60;
+    return hours > 0
+        ? `${hours}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`
+        : `${minutes}:${seconds.toString().padStart(2, '0')}`;
+}
+
 
 async function getDominantColor(imageUrl) {
     try {
@@ -102,11 +161,19 @@ async function getLyrics(trackName) {
         return "An error occurred while fetching the lyrics.";
     }
 }
+// MelodyBoard lookup
+const MelodyBoard = require("../schemas/MelodyBoard"); // path as needed
 
-module.exports = { getLyrics };
+async function getMelodyBoardChannelId(guildId) {
+  const entry = await MelodyBoard.findOne({ guildId });
+  return entry ? entry.channelId : null;
+}
 
 module.exports = {
+  getMelodyBoardChannelId,
     getLyrics,
     getThumbnailUrl,
-    getDominantColor
+    getDominantColor,
+    formatDuration,
+    emitQueueChange
 };

@@ -1,229 +1,151 @@
 /** @format */
-
 const {
-	ChatInputCommandInteraction,
-	SlashCommandBuilder,
-	EmbedBuilder,
-	ButtonBuilder,
-	ButtonStyle,
-	ActionRowBuilder
+    ChatInputCommandInteraction,
+    SlashCommandBuilder,
+    EmbedBuilder,
+    ButtonBuilder,
+    ButtonStyle,
+    ActionRowBuilder,
+    StringSelectMenuBuilder,
+    ComponentType
 } = require("discord.js");
 const ExtendedClient = require("../../../class/ExtendedClient");
 const config = require("../../../config");
-const GuildSchema = require("../../../schemas/GuildSchema");
 
 module.exports = {
-	structure: new SlashCommandBuilder()
-		.setName("help")
-		.setDescription("View all the possible commands!"),
-	options: {
-		cooldown: 15000,
-	},
-	/**
-	 * @param {ExtendedClient} client
-	 * @param {ChatInputCommandInteraction} interaction
-	 */
-	run: async (client, interaction) => {
-		let prefix = config.handler.prefix;
+    structure: new SlashCommandBuilder()
+        .setName("help")
+        .setDescription("View all commands of Blue!"),
+    options: {
+        cooldown: 15000,
+    },
 
-		if (config.handler?.mongodb?.enabled) {
-			try {
-				const data = await GuildSchema.findOne({
-					guild: interaction.guildId,
-				});
+    run: async (client, interaction) => {
+        // --- Homepage Embed ---
+        const homepageEmbed = new EmbedBuilder()
+            .setTitle("💙 Blue - Help Center")
+            .setDescription(
+                "This bot is dedicated to **Blue Butterfly**.\n\nClick the 🦋 butterfly button below to see a special dedication, or browse the commands."
+            )
+            .setColor("#1E90FF")
+            .setThumbnail(client.user.displayAvatarURL({ dynamic: true }))
+            .setFooter({ text: "Blue Bot" });
 
-				if (data && data?.prefix) prefix = data.prefix;
-			} catch {
-				prefix = config.handler.prefix;
-			}
-		}
+        // --- Dedication Embed ---
+        const firstDate = new Date("2024-05-18");
+        const today = new Date();
+        const diffTime = Math.abs(today - firstDate);
+        const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
 
-		// Create main homepage embed with detailed information about the bot
-		const homepageEmbed = new EmbedBuilder()
-			.setTitle("<:Milanio:1225426626557509724>Milanio Bot - Help")
-			.setDescription(
-				">>> <:Welcome:1225435188289601556>****Welcome to Milanio Bot!**** Below you will find all the available commands and features.\n**Use the buttons below to navigate through different sections.**"
-			)
-			.addFields(
-				{
-					name: "**__<:Info:1225427199830528071>Bot Information__**",
-					value: "> **Milanio Bot is a multi-purpose Discord bot designed to enhance your server experience.**",
-				},
-				{
-					name: "**__<:version:1225427546838007894>Bot Version__**",
-					value: `> **Version: ${
-						config.bot.version || "2.0.0-alpha"
-					}**`,
-				},
-				{
-					name: "**__<:djs:1225428267951980646>Discord Wrapper__**",
-					value: `> **discord.js@14.14.01**`,
-				}
-			)
-			.setFooter(client.config.f)
-			.setColor(client.config.c);
+        const dedicationEmbed = new EmbedBuilder()
+            .setTitle("💌 For Blue Butterfly")
+            .setDescription(
+                `From the very first day I saw you, something inside me changed. Every glance, every smile, every small moment left a mark on my heart.  
 
-		let s = [];
-		let p = [];
-		let remainingS = [];
-		let remainingP = [];
+I wanted to say so much to you, but time and this universe wouldn't let me. And when I tried, the words fell short of what I truly felt.  
 
-		// Dynamically add slash commands to the embed
-		const slashCommands = client.applicationcommandsArray.map((command) =>
-			s.push({
-				name: command.name,
-				value: command.description || "description not found",
-			})
-		);
+Still, every day, my thoughts are with you. Every line of code, every command of this bot, is a quiet way of showing my love.`
+            )
+            .addFields({ name: "It has been", value: `${diffDays} days` })
+            .setColor("#FF69B4")
+            .setThumbnail(client.user.displayAvatarURL({ dynamic: true }))
+            .setFooter({ text: "Made with ❤️ for Blue Butterfly" });
 
-		// Dynamically add prefix commands to the embed
-		const prefixCommands = client.collection.prefixcommands.map((command) =>
-			p.push({
-				name: command.structure.name,
-				value: command.structure.description || "description not found",
-				cat: client.collection.prefixCat.get(command.structure.name)
-			})
-		);
-		// Check if there are more than 25 objects in s, slice them and move the remaining to remainingS
-		if (s.length > 25) {
-			remainingS = s.slice(25);
-			s = s.slice(0, 25);
-		}
+        // --- Build category mapping ---
+        const categories = {};
+        client.applicationcommandsArray.forEach(cmd => {
+            const topCategory = cmd.name;
+            categories[topCategory] = cmd.options || [];
+        });
 
-		// Check if there are more than 25 objects in p, slice them and move the remaining to remainingP
-		if (p.length > 25) {
-			remainingP = p.slice(25);
-			p = p.slice(0, 25);
-		}
-		const prefixEmbed = new EmbedBuilder()
-			.setTitle("Milanio Bot - Help")
-			.setColor(client.config.c)
-			.setFooter(client.config.f);
+        const categoryNames = Object.keys(categories);
 
-		prefixEmbed.addFields(p);
-		const SlashEmbed = new EmbedBuilder()
-			.setTitle("Milanio Bot - Help")
-			.setColor(client.config.c)
-			.setFooter(client.config.f)
-			.addFields(s);
+        // --- Buttons ---
+        const buttonsRow = new ActionRowBuilder().addComponents(
+            new ButtonBuilder()
+                .setCustomId("dedication")
+                .setLabel("🦋 Dedication")
+                .setStyle(ButtonStyle.Primary),
+            new ButtonBuilder()
+                .setCustomId("slash")
+                .setLabel("⚡ Commands")
+                .setStyle(ButtonStyle.Success)
+        );
 
-		// Create buttons for different pages
-		const slashButton = new ButtonBuilder()
-			.setLabel("SlashCommands")
-			.setEmoji("1225431188068503554")
+        // --- Initial Reply ---
+        const helpMessage = await interaction.reply({
+            embeds: [homepageEmbed],
+            components: [buttonsRow],
+            fetchReply: true
+        });
 
-			.setStyle(ButtonStyle.Primary)
-			.setCustomId("slash_commands");
+        const collector = helpMessage.createMessageComponentCollector({
+            componentType: ComponentType.Button,
+            time: 120000
+        });
 
-		const prefixButton = new ButtonBuilder()
-			.setLabel("PrefixCommands(?)")
-			.setEmoji("1225433386676523081")
-			.setStyle(ButtonStyle.Primary)
-			.setCustomId("prefix_commands");
+        collector.on("collect", async i => {
+            if (i.user.id !== interaction.user.id)
+                return i.reply({ content: "❌ This menu is not for you!", ephemeral: true });
 
-		const homepageButton = new ButtonBuilder()
-			.setLabel(" ")
-			.setEmoji("1225433898880733255")
-			.setStyle(ButtonStyle.Primary)
-			.setCustomId("homepage");
+            if (i.customId === "dedication") {
+                await i.update({ embeds: [dedicationEmbed], components: [buttonsRow] });
+            }
 
-		const nextButton = new ButtonBuilder()
-			.setLabel("⏭️")
-			.setStyle(ButtonStyle.Secondary)
-			.setCustomId("next_page");
+            if (i.customId === "slash") {
+                // --- Category Select Menu ---
+                const selectMenu = new StringSelectMenuBuilder()
+                    .setCustomId("help_category_menu")
+                    .setPlaceholder("Select a category...")
+                    .addOptions(
+                        categoryNames.map(cat => ({
+                            label: cat,
+                            value: cat,
+                            description: `View all subcommands of ${cat}`,
+                            emoji: "📁"
+                        }))
+                    );
 
-		const previousButton = new ButtonBuilder()
-			.setLabel("⏮️")
-			.setStyle(ButtonStyle.Secondary)
-			.setCustomId("previous_page");
+                const row = new ActionRowBuilder().addComponents(selectMenu);
+                await i.update({ embeds: [homepageEmbed], components: [row, buttonsRow] });
+            }
+        });
 
-		let currentPage = 1;
+        // --- Category Select Collector ---
+        const categoryCollector = helpMessage.createMessageComponentCollector({
+            componentType: ComponentType.StringSelect,
+            time: 120000
+        });
 
-		const row = new ActionRowBuilder().addComponents(
-			slashButton,
-			homepageButton,
-			prefixButton
-		);
+        categoryCollector.on("collect", async i => {
+            if (i.user.id !== interaction.user.id)
+                return i.reply({ content: "❌ This menu is not for you!", ephemeral: true });
 
-		const helpMessage = await interaction.reply({
-			embeds: [homepageEmbed],
-			components: [row],
-		});
+            const category = i.values[0];
+            const subcommands = categories[category];
 
-		const collector = helpMessage.createMessageComponentCollector({
-			time: 60000,
-		});
+            if (!subcommands || subcommands.length === 0) {
+                return i.update({ embeds: [homepageEmbed], components: [buttonsRow] });
+            }
 
-		collector.on("collect", async (interaction) => {
-			if (interaction.user.id !== interaction.user.id) return;
+            const embed = new EmbedBuilder()
+                .setTitle(`💙 ${category} Commands`)
+                .setColor("#00BFFF")
+                .setThumbnail(client.user.displayAvatarURL({ dynamic: true }))
+                .setFooter({ text: `Blue • ${subcommands.length} subcommands` })
+                .addFields(
+                    subcommands.map(sub => ({
+                        name: `/${category} ${sub.name}`,
+                        value: sub.description || "No description provided",
+                        inline: false
+                    }))
+                );
 
-			switch (interaction.customId) {
-				case "slash_commands":
-					interaction.update({
-						embeds: [SlashEmbed],
-						components: [
-							new ActionRowBuilder().addComponents(
-								nextButton,
-								homepageButton,
-								previousButton
-							),
-						],
-					});
-					break;
-				case "prefix_commands":
-					interaction.update({
-						embeds: [prefixEmbed],
-						components: [
-							new ActionRowBuilder().addComponents(
-								nextButton,
-								homepageButton,
-								previousButton
-							),
-						],
-					});
-					break;
-				case "homepage":
-					currentPage = 1;
-					await interaction.message.edit({
-						embeds: [homepageEmbed],
-						components: [row],
-					});
-					break;
-				case "next_page":
-					currentPage++;
-					slashButton.setLabel(`Slash Commands (${currentPage})`);
-					prefixButton.setLabel(`Prefix Commands (${currentPage})`);
-					if (currentPage === 2) {
-						homepageEmbed.fields = [];
-						homepageEmbed.addFields(remainingS);
-						homepageEmbed.addFields(remainingP);
-					}
-					await interaction.update({
-						embeds: [homepageEmbed],
-						components: [row],
-					});
-					break;
-				case "previous_page":
-					currentPage--;
-					slashButton.setLabel(`Slash Commands (${currentPage})`);
-					prefixButton.setLabel(`Prefix Commands (${currentPage})`);
-					if (currentPage === 1) {
-						homepageEmbed.fields = [];
-						homepageEmbed.addFields(s);
-						homepageEmbed.addFields(p);
-					}
-					await interaction.update({
-						embeds: [homepageEmbed],
-						components: [row],
-					});
-					break;
-				default:
-					break;
-			}
-		});
+            await i.update({ embeds: [embed], components: [buttonsRow] });
+        });
 
-		collector.on("end", () => {
-			helpMessage.edit({ components: [] });
-		});
-	},
+        collector.on("end", async () => {
+            await helpMessage.edit({ components: [] });
+        });
+    },
 };

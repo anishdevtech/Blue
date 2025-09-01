@@ -2,7 +2,8 @@ const config = require("../../config");
 const { log } = require("../../functions");
 const ExtendedClient = require("../../class/ExtendedClient");
 const cooldown = new Map();
-
+const handelMelodyBoardIntraction = require("../../Functions/Melody/handelMelodyBoardIntraction.js")
+const handleMelodyBoardModal = require("../../Functions/Melody/handleMelodyBoardModal.js")
 module.exports = {
     event: "interactionCreate",
     /**
@@ -13,6 +14,23 @@ module.exports = {
      */
     run: async (client, interaction) => {
         //   console.log(interaction)
+        handelMelodyBoardIntraction(interaction,client);
+        handleMelodyBoardModal(interaction,client)
+        //Autocomplte for play music
+    if (interaction.isAutocomplete()) {
+        // Find the command by name
+        const command = client.collection.interactioncommands.get(
+            interaction.options._subcommand);
+        if (!command || !command.autocomplete) return;
+        try {
+            await command.autocomplete(client, interaction);
+        } catch (error) {
+            console.error(`Autocomplete error for '${interaction.commandName}':`, error);
+            await interaction.respond([]);
+        }
+    }
+    // ...other interaction types (chatInputCommand, etc.)
+
         if (!interaction.isCommand()) return;
 
         const command = client.collection.interactioncommands.get(

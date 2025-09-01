@@ -8,7 +8,7 @@ const ExtendedClient = require("../../../class/ExtendedClient");
 
 module.exports = {
     structure: new SlashCommandBuilder()
-        .setName("setwarnlimits")
+        .setName("setwarnlimit")
         .setDescription("Set warning limits for automatic actions")
         .addIntegerOption(option =>
             option

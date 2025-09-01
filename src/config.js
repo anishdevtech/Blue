@@ -28,8 +28,8 @@ module.exports = {
         developers: ["707066042563821569"],
     },
     development: { 
-        enabled: false,
-        guild: "1005540842427129936",
+        enabled: true,
+        guild: "707070867087294537",
     }, 
     messageSettings: {
         nsfwMessage: "The current channel is not a NSFW channel.",
